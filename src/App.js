@@ -38,6 +38,7 @@ export default class App extends Component {
 			groupPermission: "",
 
 			groups: [],
+			selectedGroups: [],
 			permissions: [],
 
 			editGroup: null
@@ -200,6 +201,7 @@ export default class App extends Component {
 
 	render() {
 		const groupsCount = this.state.groups.length;
+		const permissions = [];
 		return (
 			<ConfigProvider>
 				<Root popout={this.state.popout} activeView={this.state.activeView}>
@@ -207,7 +209,19 @@ export default class App extends Component {
 						<Panel id="main_main">
 							<PanelHeader>JSPermission</PanelHeader>
 							<Group>
+								<Div>
+									{this.state.selectedGroups.length > 0 ? this.state.selectedGroups.map((id) => {
+										let group = store.getState().groups[id];
 
+										group.permissions.map(permission => {
+											if (!permissions[permission])
+												permissions.push(permission);
+										}
+										);
+
+										return permissions.length > 0 ? "Активные права: " + permissions.join(", ") : "Нет активных прав";
+									}) : "Нет выбранных групп"}
+								</Div>
 							</Group>
 							<Group>
 								<Div style={{
@@ -219,7 +233,12 @@ export default class App extends Component {
 									<Button style={{ marginLeft: "10px" }} onClick={this.addGroup}>Добавить</Button>
 								</Div>
 								<List>
-									{groupsCount > 0 ? this.state.groups.map((group, i) => <Cell asideContent={<Switch checked={false} />} before={<Icon24Write onClick={() => this.editGroup(group)} size={16} />} description={this.getPermissions(group)} key={i}>{group.name}</Cell>) : <Placeholder icon={<Icon56UsersOutline />}>Нет групп</Placeholder>}
+									{groupsCount > 0 ? this.state.groups.map((group, i) => <Cell asideContent={<Switch onChange={(e) => {
+										if (this.state.selectedGroups.indexOf(group.id) !== -1)
+											this.setState({ selectedGroups: [...this.state.selectedGroups.slice(0, this.state.selectedGroups.indexOf(group.id)), ...this.state.selectedGroups.slice(this.state.selectedGroups.indexOf(group.id) + 1)] });
+										else
+											this.setState({ selectedGroups: [...this.state.selectedGroups, group.id] })
+									}} checked={this.state.selectedGroups.indexOf(group.id) !== -1} />} before={<Icon24Write onClick={() => this.editGroup(group)} size={16} />} description={this.getPermissions(group)} key={i}>{group.name}</Cell>) : <Placeholder icon={<Icon56UsersOutline />}>Нет групп</Placeholder>}
 								</List>
 
 							</Group>
