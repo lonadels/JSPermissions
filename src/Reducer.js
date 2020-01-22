@@ -39,6 +39,19 @@ const reducer = (state = { groups: {}, users: {} }, action) => {
 						permissions: action.permissions
 					}
 				}
+            }
+            
+            case "SET_NAME":
+			group = state.groups[action.groupID];
+			return {
+				...state,
+				groups: {
+					...state.groups, [action.groupID]:
+					{
+						...group,
+						name: action.name
+					}
+				}
 			}
 
 		case "REMOVE_GROUP":

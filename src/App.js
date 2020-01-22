@@ -5,7 +5,7 @@ import connect from '@vkontakte/vk-connect';
 
 import '@vkontakte/vkui/dist/vkui.css';
 
-import { ConfigProvider, Root, View, Panel, ScreenSpinner, Div, Group, List, Cell, Input, Placeholder, Avatar, PanelHeaderClose, PanelHeaderSubmit, FormLayout, FormLayoutGroup, Footer, Select, Switch, CellButton, Alert, IS_PLATFORM_ANDROID, Header } from '@vkontakte/vkui';
+import { ConfigProvider, Root, View, Panel, Div, Group, List, Cell, Input, Placeholder, PanelHeaderClose, Header, Footer, Switch, Alert, IS_PLATFORM_ANDROID, FormLayout, FormLayoutGroup, CellButton } from '@vkontakte/vkui';
 import { PanelHeader, Button } from '@vkontakte/vkui';
 
 import { createStore } from 'redux';
@@ -13,10 +13,7 @@ import { createStore } from 'redux';
 import Icon56UsersOutline from '@vkontakte/icons/dist/56/users_outline';
 import Icon56LockOutline from '@vkontakte/icons/dist/56/lock_outline';
 
-import Icon28UsersOutline from '@vkontakte/icons/dist/28/users_outline';
-
 import Icon24Write from '@vkontakte/icons/dist/24/write';
-import Icon24MoreHorizontal from '@vkontakte/icons/dist/24/more_horizontal';
 
 import reducer from './Reducer';
 import { declOfNum } from './Utils';
@@ -30,12 +27,13 @@ export default class App extends Component {
 
 		this.state = {
 			activeView: "main",
-			popout: <ScreenSpinner size='large' />,
+			popout: null,
 
 			valid: "default",
 			permStatus: "default",
 
 			groupName: "",
+			groupNameEdit: "",
 			groupPermission: "",
 
 			groups: [],
@@ -45,7 +43,7 @@ export default class App extends Component {
 			editGroup: null
 		}
 
-		this.fetchData();
+		//this.fetchData();
 
 		this.closePopout = this.closePopout.bind(this);
 
@@ -61,6 +59,14 @@ export default class App extends Component {
 			console.log(store.getState())
 			this.setState({ groups: Object.values(store.getState().groups) })
 		})
+
+		connect.subscribe(({ detail: { type, data } }) => {
+			if (type === 'VKWebAppUpdateConfig') {
+				const schemeAttribute = document.createAttribute('scheme');
+				schemeAttribute.value = data.scheme ? data.scheme : 'client_light';
+				document.body.attributes.setNamedItem(schemeAttribute);
+			}
+		});
 	}
 
 	async fetchData() {
@@ -74,8 +80,8 @@ export default class App extends Component {
 		this.setState({ valid: name.length > 0 ? "default" : "error" });
 		if (name.length < 1) return
 
-		for (let [key, group] of Object.entries(store.getState().groups))
-			if (group.name == name)
+		for (let [, group] of Object.entries(store.getState().groups))
+			if (group.name === name)
 				return this.setState({ valid: "error" });
 
 		this.setState({ groupName: "" });
@@ -85,6 +91,10 @@ export default class App extends Component {
 	saveGroup(group) {
 		let permissions = this.state.permissions;
 		store.dispatch({ type: "SET_PERMISSIONS", groupID: group.id, permissions });
+
+		if (this.state.groupNameEdit !== group.name)
+			store.dispatch({ type: "SET_NAME", groupID: group.id, name: this.state.groupNameEdit });
+
 		this.setState({ groupPermission: "", permissions: [] })
 	}
 
@@ -122,16 +132,6 @@ export default class App extends Component {
 
 	}
 
-	componentDidUpdate() {
-		connect.subscribe(({ detail: { type, data } }) => {
-			if (type === 'VKWebAppUpdateConfig') {
-				const schemeAttribute = document.createAttribute('scheme');
-				schemeAttribute.value = data.scheme ? data.scheme : 'client_light';
-				document.body.attributes.setNamedItem(schemeAttribute);
-			}
-		});
-	}
-
 	getPermissions(group) {
 		return group.permissions.join(", ") || "нет прав";
 	}
@@ -142,7 +142,7 @@ export default class App extends Component {
 	}
 
 	editGroup(group) {
-		this.setState({ permissions: group.permissions, permStatus: "default", groupPermission: "" })
+		this.setState({ permissions: group.permissions, permStatus: "default", groupPermission: ""})
 
 		const PermissionsList = (props) => {
 			return (
@@ -165,26 +165,26 @@ export default class App extends Component {
 			return (count > 0 && <Footer>{count} {declOfNum(count, ["право", "права", "прав"])}</Footer>)
 		}
 
+		const GroupNameInput = () => <Input onChange={this.onChange} type="text" name="groupNameEdit" value={this.state.groupNameEdit} />
+
 		this.setState({
 			editGroup: <Panel id="editGroup_main">
 				<PanelHeader
 					left={<PanelHeaderClose onClick={() => this.setState({ activeView: 'main' })} />}
-					right={<PanelHeaderSubmit primary onClick={() => {
-						this.saveGroup(group)
-						this.setState({ activeView: 'main' })
-					}} />}
 				>
 					Редактирование группы
             </PanelHeader>
 				<Group>
-					<Div style={{
-						display: "flex"
-					}}>
-						<div style={{ flex: "0 1 100%" }}>
-							<Input disabled type="text" value={group.name} />
-						</div>
-						<Button onClick={() => this.removeGroup(group)} style={{ flex: "0 0 auto", marginLeft: "10px" }} level="destructive">Удалить группу</Button>
-					</Div>
+					<FormLayout>
+						<FormLayoutGroup top="Имя группы">
+							<GroupNameInput />
+						</FormLayoutGroup>
+					</FormLayout>
+					<List>
+						<CellButton onClick={() => this.removeGroup(group)} level="danger">Удалить группу</CellButton>
+					</List>
+				</Group>
+				<Group title="Список прав">
 					<Div style={{
 						display: "flex"
 					}}>
@@ -196,7 +196,14 @@ export default class App extends Component {
 					<PermissionsList />
 				</Group>
 				<PermissionsCounter />
-			</Panel>, activeView: "editGroup"
+				<Div>
+					<Button size="xl" onClick={() => {
+						this.saveGroup(group)
+						this.setState({ activeView: 'main' })
+					}}>Сохранить</Button>
+				</Div>
+
+			</Panel>, activeView: "editGroup", groupNameEdit: group.name 
 		})
 	}
 
@@ -207,14 +214,17 @@ export default class App extends Component {
 		const ActualPermissions = () => {
 
 			if (this.state.selectedGroups.length > 0) {
-				this.state.selectedGroups.map((id) => {
+				this.state.selectedGroups.map(id => {
 					let group = store.getState().groups[id];
 
 					group.permissions.map(permission => {
 						if (permissions.indexOf(permission) === -1)
 							permissions.push(permission);
+						return true;
 					}
 					);
+
+					return true;
 				})
 				return permissions.length > 0 ? "Активные права: " + permissions.join(", ") : "Нет активных прав"
 			} else return "Нет выбранных групп"
