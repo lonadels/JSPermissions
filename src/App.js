@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 //import connect from '@vkontakte/vk-connect';
 import '@vkontakte/vkui/dist/vkui.css';
 
-import { ConfigProvider, Root, View, Panel, ScreenSpinner, Div, Group, List, Cell, Input, Placeholder, Avatar, PanelHeaderClose, PanelHeaderSubmit, FormLayout, FormLayoutGroup, Footer, Select, Switch, CellButton, Alert } from '@vkontakte/vkui';
+import { ConfigProvider, Root, View, Panel, ScreenSpinner, Div, Group, List, Cell, Input, Placeholder, Avatar, PanelHeaderClose, PanelHeaderSubmit, FormLayout, FormLayoutGroup, Footer, Select, Switch, CellButton, Alert, IS_PLATFORM_ANDROID, Header } from '@vkontakte/vkui';
 import { PanelHeader, Button } from '@vkontakte/vkui';
 
 import connect from '@vkontakte/vkui-connect-mock';
@@ -16,7 +16,6 @@ import Icon28UsersOutline from '@vkontakte/icons/dist/28/users_outline';
 
 import Icon24Write from '@vkontakte/icons/dist/24/write';
 import Icon24MoreHorizontal from '@vkontakte/icons/dist/24/more_horizontal';
-import { OS, platform } from '@vkontakte/vkui/dist/lib/platform';
 
 const reducer = (state = { groups: {}, users: {} }, action) => {
 	let group;
@@ -56,7 +55,7 @@ const reducer = (state = { groups: {}, users: {} }, action) => {
 					...state.groups, [action.groupID]:
 					{
 						...group,
-						permissions: [...group.permissions, ...action.permissions]
+						permissions: action.permissions
 					}
 				}
 			}
@@ -99,6 +98,7 @@ export default class App extends Component {
 			user: null,
 			popout: <ScreenSpinner size='large' />,
 			valid: "default",
+			permStatus: "default",
 			groupName: "",
 			groupPermission: "",
 			groups: [],
@@ -108,6 +108,8 @@ export default class App extends Component {
 		}
 
 		this.fetchData();
+
+		this.closePopout = this.closePopout.bind(this);
 
 		this.addUser = this.addUser.bind(this);
 		this.addGroup = this.addGroup.bind(this);
@@ -147,28 +149,35 @@ export default class App extends Component {
 		this.setState({ groupPermission: "", permissions: [] })
 	}
 
-	removeGroup(group){
-		this.setState({ popout: <Alert
-			actionsLayout= {platform == OS.ANDROID ? "horizontal" : "vertical"}
-			actions={[{
-			  title: 'Удалить',
-			  autoclose: true,
-			  style: 'destructive',
-			 // action: () => this.addActionLogItem('Пользователь больше не может модерировать контент.'),
-			}, {
-			  title: 'Отмена',
-			  autoclose: true,
-			  style: 'cancel'
-			}]}
-			onClose={this.closePopout}
-		  >
-			<h2>Подтвердите действие</h2>
-			<p>Вы уверены, что хотите удалить группу <b>{group.name}</b>?</p>
-		  </Alert> })
+	removeGroup(group) {
+		this.setState({
+			popout: <Alert
+				actionsLayout={IS_PLATFORM_ANDROID ? "horizontal" : "vertical"}
+				actions={[{
+					title: 'Удалить',
+					autoclose: true,
+					style: 'destructive',
+					// action: () => this.addActionLogItem('Пользователь больше не может модерировать контент.'),
+				}, {
+					title: 'Отмена',
+					autoclose: true,
+					style: 'cancel'
+				}]}
+				onClose={this.closePopout}
+			>
+				<h2>Подтвердите действие</h2>
+				<p>Вы уверены, что хотите<br />удалить группу <b>{group.name}</b>?</p>
+			</Alert>
+		})
+	}
+
+	closePopout() {
+		this.setState({ popout: null });
 	}
 
 	addPermission() {
 		let permission = this.state.groupPermission;
+		if( this.state.permissions.indexOf(permission) !== -1 ) return this.setState({permStatus: "error"});
 		//this.setState({ valid: permission.length > 0 ? "default" : "error" });
 		if (permission.length < 1) return
 		//
@@ -192,16 +201,16 @@ export default class App extends Component {
 
 	onChange(e) {
 		const { name, value } = e.currentTarget;
-		this.setState({ [name]: value, valid: "default" });
+		this.setState({ [name]: value, valid: "default", permStatus: "default" });
 	}
 
 	editGroup(group) {
-		this.setState({ permissions: group.permissions })
+		this.setState({ permissions: group.permissions, permStatus: "default", groupPermission: "" })
 
-		const PermissionsList = () => {
+		const PermissionsList = (props) => {
 			return (
 				<List>
-					{this.state.permissions.length > 0 ? this.state.permissions.map((permission, i) => <Cell removable onRemove={() => {
+					{this.state.permissions.length > 0 ? this.state.permissions.map((permission, i) => <Cell removable onRemove={(e, el) => {
 						this.setState({
 							permissions: [...this.state.permissions.slice(0, i), ...this.state.permissions.slice(i + 1)]
 						})
@@ -211,7 +220,7 @@ export default class App extends Component {
 		}
 
 		const GroupPermissionInput = () => {
-			return (<Input value={this.state.groupPermission} onChange={this.onChange} name="groupPermission" type="text" placeholder="Право" />)
+			return (<Input status={this.state.permStatus} value={this.state.groupPermission} onChange={this.onChange} name="groupPermission" type="text" placeholder="Право" />)
 		}
 
 		const PermissionsCounter = () => {
@@ -237,7 +246,7 @@ export default class App extends Component {
 						<div style={{ flex: "0 1 100%" }}>
 							<Input disabled type="text" value={group.name} />
 						</div>
-						<Button onClick={() => this.removeGroup(group)} style={{ flex: "0 0 auto",  marginLeft: "10px" }} level="destructive">Удалить группу</Button>
+						<Button onClick={() => this.removeGroup(group)} style={{ flex: "0 0 auto", marginLeft: "10px" }} level="destructive">Удалить группу</Button>
 					</Div>
 					<Div style={{
 						display: "flex"
@@ -275,7 +284,7 @@ export default class App extends Component {
 									<Button style={{ marginLeft: "10px" }} onClick={this.addGroup}>Добавить</Button>
 								</Div>
 								<List>
-									{groupsCount > 0 ? this.state.groups.map((group, i) => <Cell asideContent={<div style={{ display: "flex" }}><Icon24Write onClick={() => this.editGroup(group)} size={16} /><Switch checked={false} style={{ marginLeft: "5px" }} /></div>} before={<Avatar><Icon28UsersOutline /></Avatar>} description={"Права: " + this.getPermissions(group)} key={i}>{group.name}</Cell>) : <Placeholder icon={<Icon56UsersOutline />}>Нет групп</Placeholder>}
+									{groupsCount > 0 ? this.state.groups.map((group, i) => <Cell asideContent={<Switch checked={false} />} before={<Icon24Write onClick={() => this.editGroup(group)} size={16} />} description={this.getPermissions(group)} key={i}>{group.name}</Cell>) : <Placeholder icon={<Icon56UsersOutline />}>Нет групп</Placeholder>}
 								</List>
 
 							</Group>
