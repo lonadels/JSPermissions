@@ -47,13 +47,13 @@ export default class App extends Component {
 
 		this.closePopout = this.closePopout.bind(this);
 
-		this.addUser = this.addUser.bind(this);
 		this.addGroup = this.addGroup.bind(this);
 		this.addPermission = this.addPermission.bind(this);
 
-		this.onChange = this.onChange.bind(this);
 		this.editGroup = this.editGroup.bind(this);
 		this.removeGroup = this.removeGroup.bind(this);
+
+		this.onChange = this.onChange.bind(this);
 
 		store.subscribe(() => {
 			console.log(store.getState())
