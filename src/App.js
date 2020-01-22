@@ -3,13 +3,15 @@ import React, { Component } from 'react';
 //import connect from '@vkontakte/vk-connect';
 import '@vkontakte/vkui/dist/vkui.css';
 
-import { ConfigProvider, Root, View, Panel, ScreenSpinner, Div, Group, List, Cell, Input, Placeholder, Avatar } from '@vkontakte/vkui';
+import { ConfigProvider, Root, View, Panel, ScreenSpinner, Div, Group, List, Cell, Input, Placeholder, Avatar, PanelHeaderClose, PanelHeaderSubmit, FormLayout, FormLayoutGroup } from '@vkontakte/vkui';
 import { PanelHeader, Button } from '@vkontakte/vkui';
 
 import connect from '@vkontakte/vkui-connect-mock';
 import { createStore } from 'redux';
 
 import Icon56UsersOutline from '@vkontakte/icons/dist/56/users_outline';
+import Icon56LockOutline from '@vkontakte/icons/dist/56/lock_outline';
+
 import Icon28UsersOutline from '@vkontakte/icons/dist/28/users_outline';
 
 const reducer = (state = { groups: {}, users: {} }, action) => {
@@ -20,7 +22,7 @@ const reducer = (state = { groups: {}, users: {} }, action) => {
 				...state,
 				groups: {
 					...state.groups,
-					[2 ^ groupKeys.length]: {
+					[Math.pow(2, groupKeys.length)]: {
 						name: action.name,
 						permissions: []
 					}
@@ -72,7 +74,10 @@ export default class App extends Component {
 			user: null,
 			popout: <ScreenSpinner size='large' />,
 			valid: "default",
-			groups: []
+			groupName: "",
+			groups: [],
+			activeView: "main",
+			editGroup: null
 		}
 
 		this.fetchData();
@@ -82,8 +87,10 @@ export default class App extends Component {
 		this.addPermission = this.addPermission.bind(this);
 
 		this.onChange = this.onChange.bind(this);
+		this.editGroup = this.editGroup.bind(this);
 
 		store.subscribe(() => {
+			console.log(store.getState())
 			this.setState({ groups: Object.values(store.getState().groups) })
 		})
 	}
@@ -101,8 +108,8 @@ export default class App extends Component {
 
 	addGroup() {
 		let name = this.state.groupName;
-		this.setState({valid: name.length > 0 ? "default" : "error"});
-		if(name.length < 1) return
+		this.setState({ valid: name.length > 0 ? "default" : "error" });
+		if (name.length < 1) return
 		store.dispatch({ type: "ADD_GROUP", name });
 	}
 
@@ -131,27 +138,73 @@ export default class App extends Component {
 		this.setState({ [name]: value, valid: "default" });
 	}
 
+	editGroup(group) {
+		let PermissionsList = () => {
+			return (
+				<List>
+					{group.permissions.length > 0 ? group.permissions.map((permission) => <Cell>{permission}</Cell>) : <Placeholder icon={<Icon56LockOutline />}>В группе не установлены <br /> права</Placeholder>}
+				</List>
+			)
+		}
+
+		this.setState({
+			editGroup: <Panel id="editGroup_main">
+				<PanelHeader
+					left={<PanelHeaderClose onClick={() => this.setState({ activeView: 'main' })} />}
+					right={<PanelHeaderSubmit primary onClick={() => this.setState({ activeView: 'main' })} />}
+				>
+					Редактирование группы
+            </PanelHeader>
+				<Group>
+					<FormLayout>
+						<FormLayoutGroup top="Название">
+							<Input disabled type="text" value={group.name} />
+						</FormLayoutGroup>
+					</FormLayout>
+
+					<PermissionsList />
+
+					<Div style={{
+						display: "flex"
+					}}>
+						<div style={{ flex: "0 1 100%" }} >
+							<Input status={this.state.valid} onChange={this.onChange} name="groupName" type="text" placeholder="Право" />
+						</div>
+						<Button style={{ marginLeft: "10px" }} onClick={this.addGroup}>Добавить</Button>
+					</Div>
+
+				</Group>
+			</Panel>, activeView: "editGroup"
+		})
+	}
+
 	render() {
 
 		return (
 			<ConfigProvider>
-				<Root>
-					<View popout={this.state.popout}>
-						<Panel>
+				<Root popout={this.state.popout} activeView={this.state.activeView}>
+					<View id="main" activePanel="main_main">
+						<Panel id="main_main">
 							<PanelHeader>JSPermission</PanelHeader>
 							<Group title="Группы">
-								
-									<List>
-										{ this.state.groups.length > 0 ? this.state.groups.map((group, i) => <Cell expandable onClick={() => null} before={<Avatar><Icon28UsersOutline /></Avatar>} description={"Права: " + this.getPermissions(group)} key={i}>{group.name}</Cell>) : <Placeholder icon={<Icon56UsersOutline />}>Нет групп</Placeholder>}
-									</List>
-									<Div style={{display: "flex"}}>
+								<List>
+									{this.state.groups.length > 0 ? this.state.groups.map((group, i) => <Cell expandable onClick={() => this.editGroup(group)} before={<Avatar><Icon28UsersOutline /></Avatar>} description={"Права: " + this.getPermissions(group)} key={i}>{group.name}</Cell>) : <Placeholder icon={<Icon56UsersOutline />}>Нет групп</Placeholder>}
+								</List>
+								<Div style={{
+									display: "flex",
+								}}>
+									<div style={{ flex: "0 1 100%" }} >
 										<Input status={this.state.valid} onChange={this.onChange} name="groupName" type="text" placeholder="Название группы" />
-										<Button style={{marginLeft: "10px"}} onClick={this.addGroup}>Добавить</Button>
-									</Div>
-								
+									</div>
+									<Button style={{ marginLeft: "10px" }} onClick={this.addGroup}>Добавить</Button>
+								</Div>
+
 							</Group>
 
 						</Panel>
+					</View>
+					<View id="editGroup" activePanel="editGroup_main">
+						{this.state.editGroup}
 					</View>
 				</Root>
 			</ConfigProvider>
