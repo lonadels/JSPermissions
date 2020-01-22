@@ -59,8 +59,11 @@ const reducer = (state = { groups: {}, users: {} }, action) => {
 					}
 				}
 			}
-		case "ADD_USER":
-			return { ...state, users: [...state.users, action.user] }
+
+		case "REMOVE_GROUP":
+			/** @TODO */ 
+			break;
+
 		default: return state;
 	}
 }
@@ -71,23 +74,6 @@ const declOfNum = (number, titles) => {
 }
 
 var store = createStore(reducer);
-
-class User {
-	constructor(name, privLevel) {
-		this._name = name;
-		this._privLevel = privLevel;
-	}
-
-	hasPermission(permission) {
-		let permissions = [];
-
-		for (let [group, bin] in Object.entries(store.getState().groups))
-			if (bin & this.privLevel)
-				permissions = [...permissions, ...store.getState().permissions[group]]
-
-		return permissions.indexOf(permission) !== -1 && permissions.indexOf("-" + permission) === -1;
-	}
-}
 
 export default class App extends Component {
 
@@ -138,8 +124,15 @@ export default class App extends Component {
 
 	addGroup() {
 		let name = this.state.groupName;
-		this.setState({ valid: name.length > 0 ? "default" : "error", groupName: "" });
+
+		this.setState({ valid: name.length > 0 ? "default" : "error" });
 		if (name.length < 1) return
+
+		for (let [key, group] of Object.entries(store.getState().groups))
+			if (group.name == name)
+				return this.setState({ valid: "error" });
+
+		this.setState({groupName: ""});		
 		store.dispatch({ type: "ADD_GROUP", name });
 	}
 
@@ -177,7 +170,7 @@ export default class App extends Component {
 
 	addPermission() {
 		let permission = this.state.groupPermission;
-		if( this.state.permissions.indexOf(permission) !== -1 ) return this.setState({permStatus: "error"});
+		if (this.state.permissions.indexOf(permission) !== -1) return this.setState({ permStatus: "error" });
 		//this.setState({ valid: permission.length > 0 ? "default" : "error" });
 		if (permission.length < 1) return
 		//
