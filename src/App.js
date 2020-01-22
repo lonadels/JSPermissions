@@ -15,21 +15,24 @@ import Icon56LockOutline from '@vkontakte/icons/dist/56/lock_outline';
 import Icon28UsersOutline from '@vkontakte/icons/dist/28/users_outline';
 
 const reducer = (state = { groups: {}, users: {} }, action) => {
+	let group;
 	switch (action.type) {
 		case "ADD_GROUP":
 			let groupKeys = Object.keys(state.groups);
+			let groupID = Math.pow(2, groupKeys.length);
 			return {
 				...state,
 				groups: {
 					...state.groups,
-					[Math.pow(2, groupKeys.length)]: {
+					[groupID]: {
 						name: action.name,
-						permissions: []
+						permissions: [],
+						id: groupID
 					}
 				}
 			}
 		case "ADD_PERMISSION":
-			let group = state.groups[action.groupID];
+			group = state.groups[action.groupID];
 			return {
 				...state,
 				groups: {
@@ -37,6 +40,19 @@ const reducer = (state = { groups: {}, users: {} }, action) => {
 					{
 						...group,
 						permissions: [...group.permissions, action.permission]
+					}
+				}
+			}
+
+		case "SET_PERMISSIONS":
+			group = state.groups[action.groupID];
+			return {
+				...state,
+				groups: {
+					...state.groups, [action.groupID]:
+					{
+						...group,
+						permissions: [...group.permissions, ...action.permissions]
 					}
 				}
 			}
@@ -75,8 +91,10 @@ export default class App extends Component {
 			popout: <ScreenSpinner size='large' />,
 			valid: "default",
 			groupName: "",
+			groupPermission: "",
 			groups: [],
 			activeView: "main",
+			permissions: [],
 			editGroup: null
 		}
 
@@ -113,10 +131,19 @@ export default class App extends Component {
 		store.dispatch({ type: "ADD_GROUP", name });
 	}
 
+	saveGroup(group){
+		let permissions = this.state.permissions;
+		store.dispatch({ type: "SET_PERMISSIONS", groupID: group.id, permissions });
+		this.setState({groupPermission: "", permissions: []})
+	}
+
 	addPermission() {
-		//let user = new User("lonadels", );
-		//user.
-		//store.dispatch({type: "ADD_USER", user });
+		let permission = this.state.groupPermission;
+		//this.setState({ valid: permission.length > 0 ? "default" : "error" });
+		if (permission.length < 1) return
+		//
+		this.setState( {permissions: [...this.state.permissions, permission]} )
+
 	}
 
 	componentDidUpdate() {
@@ -139,10 +166,12 @@ export default class App extends Component {
 	}
 
 	editGroup(group) {
+		this.setState( {permissions: group.permissions} )
+
 		let PermissionsList = () => {
 			return (
 				<List>
-					{group.permissions.length > 0 ? group.permissions.map((permission) => <Cell>{permission}</Cell>) : <Placeholder icon={<Icon56LockOutline />}>В группе не установлены <br /> права</Placeholder>}
+					{this.state.permissions.length > 0 ? this.state.permissions.map((permission, i) => <Cell removable onRemove={() => null} key={i}>{permission}</Cell>) : <Placeholder icon={<Icon56LockOutline />}>В группе не установлены <br /> права</Placeholder>}
 				</List>
 			)
 		}
@@ -151,7 +180,10 @@ export default class App extends Component {
 			editGroup: <Panel id="editGroup_main">
 				<PanelHeader
 					left={<PanelHeaderClose onClick={() => this.setState({ activeView: 'main' })} />}
-					right={<PanelHeaderSubmit primary onClick={() => this.setState({ activeView: 'main' })} />}
+					right={<PanelHeaderSubmit primary onClick={() => {
+						this.saveGroup(group)
+						this.setState({ activeView: 'main' })
+					} } />}
 				>
 					Редактирование группы
             </PanelHeader>
@@ -168,9 +200,9 @@ export default class App extends Component {
 						display: "flex"
 					}}>
 						<div style={{ flex: "0 1 100%" }} >
-							<Input status={this.state.valid} onChange={this.onChange} name="groupName" type="text" placeholder="Право" />
+							<Input onChange={this.onChange} name="groupPermission" type="text" placeholder="Право" />
 						</div>
-						<Button style={{ marginLeft: "10px" }} onClick={this.addGroup}>Добавить</Button>
+						<Button style={{ marginLeft: "10px" }} onClick={this.addPermission}>Добавить</Button>
 					</Div>
 
 				</Group>
