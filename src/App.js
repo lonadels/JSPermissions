@@ -3,12 +3,14 @@ import React, { Component } from 'react';
 //import connect from '@vkontakte/vk-connect';
 import '@vkontakte/vkui/dist/vkui.css';
 
-import { ConfigProvider, Root, View, Panel, ScreenSpinner, Div, Group, List, Cell } from '@vkontakte/vkui';
+import { ConfigProvider, Root, View, Panel, ScreenSpinner, Div, Group, List, Cell, Input, Placeholder, Avatar } from '@vkontakte/vkui';
 import { PanelHeader, Button } from '@vkontakte/vkui';
 
 import connect from '@vkontakte/vkui-connect-mock';
 import { createStore } from 'redux';
 
+import Icon56UsersOutline from '@vkontakte/icons/dist/56/users_outline';
+import Icon28UsersOutline from '@vkontakte/icons/dist/28/users_outline';
 
 const reducer = (state = { groups: {}, users: {} }, action) => {
 	switch (action.type) {
@@ -18,7 +20,7 @@ const reducer = (state = { groups: {}, users: {} }, action) => {
 				...state,
 				groups: {
 					...state.groups,
-					[2^groupKeys.length]: {
+					[2 ^ groupKeys.length]: {
 						name: action.name,
 						permissions: []
 					}
@@ -69,6 +71,7 @@ export default class App extends Component {
 		this.state = {
 			user: null,
 			popout: <ScreenSpinner size='large' />,
+			valid: "default",
 			groups: []
 		}
 
@@ -78,8 +81,10 @@ export default class App extends Component {
 		this.addGroup = this.addGroup.bind(this);
 		this.addPermission = this.addPermission.bind(this);
 
-		store.subscribe(()=>{
-			this.setState({groups: Object.values(store.getState().groups)})
+		this.onChange = this.onChange.bind(this);
+
+		store.subscribe(() => {
+			this.setState({ groups: Object.values(store.getState().groups) })
 		})
 	}
 
@@ -95,7 +100,9 @@ export default class App extends Component {
 	}
 
 	addGroup() {
-		let name = "test";
+		let name = this.state.groupName;
+		this.setState({valid: name.length > 0 ? "default" : "error"});
+		if(name.length < 1) return
 		store.dispatch({ type: "ADD_GROUP", name });
 	}
 
@@ -115,22 +122,33 @@ export default class App extends Component {
 		});
 	}
 
+	getPermissions(group) {
+		return group.permissions.join(", ") || "нет прав";
+	}
+
+	onChange(e) {
+		const { name, value } = e.currentTarget;
+		this.setState({ [name]: value, valid: "default" });
+	}
 
 	render() {
-		
+
 		return (
 			<ConfigProvider>
 				<Root>
 					<View popout={this.state.popout}>
 						<Panel>
 							<PanelHeader>JSPermission</PanelHeader>
-							<Group>
-								<Div>
+							<Group title="Группы">
+								
 									<List>
-										{ this.state.groups.map((group, i) => <Cell key={i}>{group.name}</Cell>) }
+										{ this.state.groups.length > 0 ? this.state.groups.map((group, i) => <Cell expandable onClick={() => null} before={<Avatar><Icon28UsersOutline /></Avatar>} description={"Права: " + this.getPermissions(group)} key={i}>{group.name}</Cell>) : <Placeholder icon={<Icon56UsersOutline />}>Нет групп</Placeholder>}
 									</List>
-									<Button onClick={this.addGroup}>Добавить группу</Button>
-								</Div>
+									<Div style={{display: "flex"}}>
+										<Input status={this.state.valid} onChange={this.onChange} name="groupName" type="text" placeholder="Название группы" />
+										<Button style={{marginLeft: "10px"}} onClick={this.addGroup}>Добавить</Button>
+									</Div>
+								
 							</Group>
 
 						</Panel>
