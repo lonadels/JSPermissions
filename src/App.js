@@ -17,61 +17,8 @@ import Icon28UsersOutline from '@vkontakte/icons/dist/28/users_outline';
 import Icon24Write from '@vkontakte/icons/dist/24/write';
 import Icon24MoreHorizontal from '@vkontakte/icons/dist/24/more_horizontal';
 
-const reducer = (state = { groups: {}, users: {} }, action) => {
-	let group;
-	switch (action.type) {
-		case "ADD_GROUP":
-			let groupKeys = Object.keys(state.groups);
-			let groupID = Math.pow(2, groupKeys.length);
-			return {
-				...state,
-				groups: {
-					...state.groups,
-					[groupID]: {
-						name: action.name,
-						permissions: [],
-						id: groupID
-					}
-				}
-			}
-		case "ADD_PERMISSION":
-			group = state.groups[action.groupID];
-			return {
-				...state,
-				groups: {
-					...state.groups, [action.groupID]:
-					{
-						...group,
-						permissions: [...group.permissions, action.permission]
-					}
-				}
-			}
-
-		case "SET_PERMISSIONS":
-			group = state.groups[action.groupID];
-			return {
-				...state,
-				groups: {
-					...state.groups, [action.groupID]:
-					{
-						...group,
-						permissions: action.permissions
-					}
-				}
-			}
-
-		case "REMOVE_GROUP":
-			/** @TODO */ 
-			break;
-
-		default: return state;
-	}
-}
-
-const declOfNum = (number, titles) => {
-	const cases = [2, 0, 1, 1, 1, 2];
-	return titles[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[(number % 10 < 5) ? number % 10 : 5]];
-}
+import reducer from './Reducer';
+import { declOfNum } from './Utils';
 
 var store = createStore(reducer);
 
@@ -81,15 +28,18 @@ export default class App extends Component {
 		super();
 
 		this.state = {
-			user: null,
+			activeView: "main",
 			popout: <ScreenSpinner size='large' />,
+
 			valid: "default",
 			permStatus: "default",
+
 			groupName: "",
 			groupPermission: "",
+
 			groups: [],
-			activeView: "main",
 			permissions: [],
+
 			editGroup: null
 		}
 
@@ -116,12 +66,6 @@ export default class App extends Component {
 		this.setState({ user, popout: null });
 	}
 
-	addUser() {
-		//let user = new User("lonadels", );
-		//user.
-		//store.dispatch({type: "ADD_USER", user });
-	}
-
 	addGroup() {
 		let name = this.state.groupName;
 
@@ -132,7 +76,7 @@ export default class App extends Component {
 			if (group.name == name)
 				return this.setState({ valid: "error" });
 
-		this.setState({groupName: ""});		
+		this.setState({ groupName: "" });
 		store.dispatch({ type: "ADD_GROUP", name });
 	}
 
@@ -171,9 +115,7 @@ export default class App extends Component {
 	addPermission() {
 		let permission = this.state.groupPermission;
 		if (this.state.permissions.indexOf(permission) !== -1) return this.setState({ permStatus: "error" });
-		//this.setState({ valid: permission.length > 0 ? "default" : "error" });
 		if (permission.length < 1) return
-		//
 		this.setState({ permissions: [...this.state.permissions, permission], groupPermission: "" })
 
 	}
