@@ -1,12 +1,13 @@
 import React, { Component } from 'react';
 
-//import connect from '@vkontakte/vk-connect';
+import connect from '@vkontakte/vk-connect';
+//import connect from '@vkontakte/vkui-connect-mock';
+
 import '@vkontakte/vkui/dist/vkui.css';
 
 import { ConfigProvider, Root, View, Panel, ScreenSpinner, Div, Group, List, Cell, Input, Placeholder, Avatar, PanelHeaderClose, PanelHeaderSubmit, FormLayout, FormLayoutGroup, Footer, Select, Switch, CellButton, Alert, IS_PLATFORM_ANDROID, Header } from '@vkontakte/vkui';
 import { PanelHeader, Button } from '@vkontakte/vkui';
 
-import connect from '@vkontakte/vkui-connect-mock';
 import { createStore } from 'redux';
 
 import Icon56UsersOutline from '@vkontakte/icons/dist/56/users_outline';
@@ -202,6 +203,23 @@ export default class App extends Component {
 	render() {
 		const groupsCount = this.state.groups.length;
 		const permissions = [];
+
+		const ActualPermissions = () => {
+
+			if (this.state.selectedGroups.length > 0) {
+				this.state.selectedGroups.map((id) => {
+					let group = store.getState().groups[id];
+
+					group.permissions.map(permission => {
+						if (permissions.indexOf(permission) === -1)
+							permissions.push(permission);
+					}
+					);
+				})
+				return permissions.length > 0 ? "Активные права: " + permissions.join(", ") : "Нет активных прав"
+			} else return "Нет выбранных групп"
+		}
+
 		return (
 			<ConfigProvider>
 				<Root popout={this.state.popout} activeView={this.state.activeView}>
@@ -210,17 +228,7 @@ export default class App extends Component {
 							<PanelHeader>JSPermission</PanelHeader>
 							<Group>
 								<Div>
-									{this.state.selectedGroups.length > 0 ? this.state.selectedGroups.map((id) => {
-										let group = store.getState().groups[id];
-
-										group.permissions.map(permission => {
-											if (!permissions[permission])
-												permissions.push(permission);
-										}
-										);
-
-										return permissions.length > 0 ? "Активные права: " + permissions.join(", ") : "Нет активных прав";
-									}) : "Нет выбранных групп"}
+									<ActualPermissions />
 								</Div>
 							</Group>
 							<Group>
