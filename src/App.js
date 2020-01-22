@@ -142,29 +142,17 @@ export default class App extends Component {
 	}
 
 	editGroup(group) {
-		this.setState({ permissions: group.permissions, permStatus: "default", groupPermission: ""})
+		this.setState({ permissions: group.permissions, permStatus: "default", groupPermission: "" })
 
-		const PermissionsList = (props) => {
-			return (
-				<List>
-					{this.state.permissions.length > 0 ? this.state.permissions.map((permission, i) => <Cell removable onRemove={(e, el) => {
-						this.setState({
-							permissions: [...this.state.permissions.slice(0, i), ...this.state.permissions.slice(i + 1)]
-						})
-					}} key={permission}>{permission}</Cell>) : <Placeholder icon={<Icon56LockOutline />}>В группе не установлены <br /> права</Placeholder>}
-				</List>
-			)
-		}
+		const PermissionsList = (props) => <List>
+			{this.state.permissions.length > 0 ? this.state.permissions.map((permission, i) => <Cell removable onRemove={(e, el) => {
+				this.setState({
+					permissions: [...this.state.permissions.slice(0, i), ...this.state.permissions.slice(i + 1)]
+				})
+			}} key={permission}>{permission}</Cell>) : <Placeholder icon={<Icon56LockOutline />}>В группе не установлены <br /> права</Placeholder>}
+		</List>
 
-		const GroupPermissionInput = () => {
-			return (<Input status={this.state.permStatus} value={this.state.groupPermission} onChange={this.onChange} name="groupPermission" type="text" placeholder="Право" />)
-		}
-
-		const PermissionsCounter = () => {
-			let count = this.state.permissions.length;
-			return (count > 0 && <Footer>{count} {declOfNum(count, ["право", "права", "прав"])}</Footer>)
-		}
-
+		const GroupPermissionInput = () => <Input status={this.state.permStatus} value={this.state.groupPermission} onChange={this.onChange} name="groupPermission" type="text" placeholder="Право" />
 		const GroupNameInput = () => <Input onChange={this.onChange} type="text" name="groupNameEdit" value={this.state.groupNameEdit} />
 
 		this.setState({
@@ -195,7 +183,6 @@ export default class App extends Component {
 					</Div>
 					<PermissionsList />
 				</Group>
-				<PermissionsCounter />
 				<Div>
 					<Button size="xl" onClick={() => {
 						this.saveGroup(group)
@@ -203,7 +190,7 @@ export default class App extends Component {
 					}}>Сохранить</Button>
 				</Div>
 
-			</Panel>, activeView: "editGroup", groupNameEdit: group.name 
+			</Panel>, activeView: "editGroup", groupNameEdit: group.name
 		})
 	}
 
